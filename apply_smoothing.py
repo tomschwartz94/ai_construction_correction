@@ -44,6 +44,9 @@ if args.model_path.endswith('.json'):
         error_range = model_data['error_range']
         train_picture = model_data['train_arr']
         model = xgb.XGBClassifier()
+        print(f"Window size: {window_size}")
+        print(f"Error range: {error_range}")
+        print(f"Training input: {train_picture}")
         model.load_model('model_xgb.json')
 else:
     try:
@@ -52,6 +55,9 @@ else:
                 window_size = f.attrs['window_size'] # this is the window size used in training
                 error_range = f.attrs['error_range'] # this is the error range used in training
                 train_picture = f.attrs['training_input'] # this is the training input image
+                print(f"Window size: {window_size}")
+                print(f"Error range: {error_range}")
+                print(f"Training input: {train_picture}")
                 model = tf.keras.models.load_model(f)
     except:
         "no metadata in file available"
