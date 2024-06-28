@@ -1,10 +1,12 @@
 import time
-from random import random
+
 import numpy as np
-from joblib import Parallel, delayed
-from neighborhood_extraction import extract_2D_neighborhood_with_error, extract_3D_neighborhood_with_error
-import xgboost as xgb
 import tensorflow as tf
+import xgboost as xgb
+from joblib import Parallel, delayed
+
+from neighborhood_extraction import extract_3D_neighborhood, extract_2D_neighborhood_with_error
+
 
 ######################################################################################################################################################################
 # __  __          _     _                   _            __                    ___    _____                                        _     _       _
@@ -37,8 +39,9 @@ def apply_smoothing_2D(model, arr, windowSize):
 
             input = extract_2D_neighborhood_with_error(i, j, arr, windowSize, 0)
             if xbg_model:
-                predictions = model.get_booster().inplace_predict([input])
-                arr[i, j] = np.round(predictions[0])
+                predictions = model.predict([input])
+                arr[i, j] = predictions[0]
+
             else:
                 predictions = model(tf.expand_dims(input, axis=0))
                 arr[i, j] = np.round(predictions[0][0])
@@ -69,9 +72,9 @@ def apply_smoothing_3D(model, arr, windowSize):
     Returns:
     numpy.ndarray: The smoothed 3D array.
     """
-    xbg_model=False
-    if isinstance(model, xgb.Booster):
-        xbg_model=True
+    xbg_model = False
+    if isinstance(model, xgb.XGBClassifier):
+        xbg_model = True
 
     for plane in range(3):
         print(f'{plane}')
@@ -79,7 +82,7 @@ def apply_smoothing_3D(model, arr, windowSize):
             for j in range(len(arr[0])):
                 for k in range(len(arr[0][0])):
 
-                    input = extract_3D_neighborhood_with_error(i, j, k, arr, windowSize, plane)
+                    input = extract_3D_neighborhood(i, j, k, arr, windowSize, plane)
                     if xbg_model:
                         predictions = model.get_booster().inplace_predict([input])
                         arr[i, j,k] = np.round(predictions[0])
@@ -126,7 +129,7 @@ def parallelized_loop_for_prediction(arr, i, model, plane, windowSize):
 
     for j in range(len(arr[0])):
         for k in range(len(arr[0][0])):
-            input = extract_3D_neighborhood_with_error(i, j, k, arr, windowSize, plane)
+            input = extract_3D_neighborhood(i, j, k, arr, windowSize, plane)
             predictions = model([input])
             # [(0.2, 0.8)]
             if predictions[0][0] < 0.5:

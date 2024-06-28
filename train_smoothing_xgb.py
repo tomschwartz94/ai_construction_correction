@@ -42,11 +42,11 @@ print(f"Shape of outputs/labels: {outputs.shape}")
 train_data, test_data, train_labels, test_labels = train_test_split(inputs, outputs, test_size=0.2, random_state=42)
 
 # Reshape for XGBoost
-train_data_reshaped = train_data.reshape((train_data.shape[0], -1))
-test_data_reshaped = test_data.reshape((test_data.shape[0], -1))
+#train_data_reshaped = train_data.reshape((train_data.shape[0], -1))
+#test_data_reshaped = test_data.reshape((test_data.shape[0], -1))
 
 # Define and train the XGBoost model with GPU support
-eval_set = [(train_data_reshaped, train_labels), (test_data_reshaped, test_labels)]
+eval_set = [(train_data, train_labels), (test_data, test_labels)]
 model = xgb.XGBClassifier(
     n_estimators=5000,  # Increased number of estimators
     max_depth=10,
@@ -59,7 +59,7 @@ model = xgb.XGBClassifier(
 )
 
 model.fit(
-    train_data_reshaped, 
+    train_data,
     train_labels, 
     eval_metric="logloss", 
     eval_set=eval_set, 
@@ -81,7 +81,7 @@ with open('model_xgb.json', 'w') as json_file:
 #model_dict = open('model_xgb.json', 'rb').read()
 
 # Predict on the test set
-y_pred = model.predict(test_data_reshaped)
+y_pred = model.predict(test_data)
 
 # Evaluate the model
 accuracy = accuracy_score(test_labels, y_pred)
@@ -103,7 +103,7 @@ plt.show()
 print(f'Training log loss: {training_loss[-1]:.4f}')
 print(f'Validation log loss: {validation_loss[-1]:.4f}')
 
-y_pred_prob = model.predict_proba(test_data_reshaped)[:, 1]  # Probability of the positive class
+y_pred_prob = model.predict_proba(test_data)[:, 1]  # Probability of the positive class
 # Calculate ROC curve
 fpr, tpr, _ = roc_curve(test_labels, y_pred_prob)
 roc_auc = auc(fpr, tpr)

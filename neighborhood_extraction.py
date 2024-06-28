@@ -41,7 +41,7 @@ def extract_2D_neighborhood_with_error(i, j, arr, windowSize, error):
     if error > 0:
         for index in range(len(inputs)):
             if np.random.uniform(0, 1) < error:
-                inputs[index] = np.random.randint(0, 1)
+                inputs[index] = np.random.randint(0, 2)
 
 
     return inputs
@@ -79,8 +79,10 @@ def extract_2D_full_data_with_error_range(arr, windowSize, error_range,multiplic
     return np.asarray(inputs), np.asarray(outputs)
 
 
-def extract_3D_neighborhood_with_error(i, j, k, arr, windowSize, plane):
-    inputs = np.empty((1, windowSize, windowSize, 1), dtype=int)
+def extract_3D_neighborhood(i, j, k, arr, windowSize, plane):
+    inputs = np.empty(windowSize * windowSize-1, dtype=int)
+
+    central_pixel_was_ignored = False
 
     height, length, width = arr.shape
     z = k
@@ -90,14 +92,24 @@ def extract_3D_neighborhood_with_error(i, j, k, arr, windowSize, plane):
             i_periodic = x % height
             j_periodic = y % length
 
-            if plane == 0:
-                inputs[0][x - (i - windowSize // 2)][y - (j - windowSize // 2)][0] = arr[i_periodic][j_periodic][k]
+            if central_pixel_was_ignored:
+                index = (x - (i - windowSize // 2)) * windowSize + (y - (j - windowSize // 2))-1
+            else:
+                index = (x - (i - windowSize // 2)) * windowSize + (y - (j - windowSize // 2))
 
-            if plane == 1:
-                inputs[0][x - (i - windowSize // 2)][y - (j - windowSize // 2)][0] = arr[j_periodic][k][i_periodic]
+            if x == i and y == j:
+                central_pixel_was_ignored = True
+                continue
 
-            if plane == 2:
-                inputs[0][x - (i - windowSize // 2)][y - (j - windowSize // 2)][0] = arr[k][j_periodic][i_periodic]
+            else:
+                if plane == 0:
+                    inputs[index] = arr[i_periodic][j_periodic][k]
+
+                if plane == 1:
+                    inputs[index] = arr[j_periodic][k][i_periodic]
+
+                if plane == 2:
+                    inputs[index] = arr[k][j_periodic][i_periodic]
 
     return inputs
 

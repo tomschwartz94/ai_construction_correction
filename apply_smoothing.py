@@ -70,7 +70,7 @@ if args.smoothing_input_path.endswith('.png'):
     input_picture = make_grid_binary(input_arr)
 elif args.smoothing_input_path.endswith('.npy'):
     # Load npy file into an array
-    input_picture = np.load(args.smoothing_input)
+    input_picture = np.load(args.smoothing_input_path)
 else:
     print('unsupported file type')
     exit(1)
@@ -117,9 +117,10 @@ for i in range(args.iterations):
     else:
         output_image = apply_smoothing_2D(model, input_picture, window_size)
 
-    # Save the output image
-    output_image_path = f'./output/{start_time}{args.filename}_{resolution}_window_size{window_size}_{dim}D/png/{i + 1}.png'
-    Image.fromarray((output_image*255).astype(np.uint8)).save(output_image_path)
+    if not input_is_3d:
+        # Save the output image
+        output_image_path = f'./output/{start_time}{args.filename}_{resolution}_window_size{window_size}_{dim}D/png/{i + 1}.png'
+        Image.fromarray((output_image*255).astype(np.uint8)).save(output_image_path)
 
     # Save the output image as a .npy file
     output_npy_path = f'./output/{start_time}{args.filename}_{resolution}_window_size{window_size}_{dim}D/npy/{i + 1}.npy'
