@@ -62,3 +62,14 @@ def convert_np_to_vti(volume, output_path):
         output_path)
     writer.SetInputData(vtk_image_data)
     writer.Write()
+
+def generate_log_file(output_dir, model_params, args):
+    log_file_path = os.path.join(output_dir, 'log.txt')
+    with open(log_file_path, 'w') as log_file:
+        log_file.write("Model Parameters:\n")
+        for key, value in model_params.items():
+            log_file.write(f"{key}: {value}\n")
+
+        log_file.write("\nCommand-line Arguments:\n")
+        for arg in vars(args):
+            log_file.write(f"{arg}: {getattr(args, arg)}\n")

@@ -1,21 +1,13 @@
-
-
 import argparse
-import random as random
-import matplotlib.pyplot as plt
-import numpy as np
-import tensorflow as tf
-from PIL import Image
-import os.path
-from prediction import apply_smoothing_2D, apply_smoothing_3D
-from conversions_and_misc import make_grid_binary, convert_np_to_vti
-#from hk import hk_plotting, hk_plotting_and_grain_boundery_elimination
-from tensorflow.python.keras.saving import hdf5_format
-import h5py
 import json
-#import train_xgb
+import os.path
 import time
+import numpy as np
 import xgboost as xgb
+from PIL import Image
+from conversions_and_misc import generate_log_file, make_grid_binary, convert_np_to_vti
+from prediction import apply_smoothing_2D, apply_smoothing_3D
+
 #log file: dokumentiert nochmal alle parameter
 
 # collect Timestamp
@@ -29,37 +21,25 @@ model=0
 # collecting the arguments from the command line
 parser = argparse.ArgumentParser("apply_smoothing")
 parser.add_argument("iterations", help="defines the number of sequential smoothings applied to the input", type=int)
-parser.add_argument("threshold", help="defines the treshold for deciding between grain and boundary", type=str)
+parser.add_argument("threshold", help="defines the treshold for deciding between grain and boundary. Must be between 0 and 3. treshold > 1.5 means more boundary predictions will be made ", type=float)
 parser.add_argument("smoothing_input_path", help="must be a path to a 2 or 3 dimensional binary matrix .npy or .png file (only 2D for obvious reasons)", type=str)
-parser.add_argument("model_path", help="must be a path to a .h5 or .json file containing the model", type=str)
+parser.add_argument("model_path", help="must be a .json file containing the xgb model", type=str)
 parser.add_argument("filename", help="defines the name of the output subfolder", type=str)
 args = parser.parse_args()
 print(args.smoothing_input_path)
 # Load the model and extract the window size and error range from file attributes
 
-if args.model_path.endswith('.json'):
-    print(('works'))
-    with open(args.model_path, 'r') as f:
-        model_data = json.load(f)
-        window_size = model_data['window_size']
-        error_range = model_data['error_range']
-        train_picture = model_data['train_arr']
-        model = xgb.XGBClassifier()
-        model.load_model(args.model_path)
-else:
-    try:
-        with tf.device('/CPU:0'):
-            with h5py.File(args.model_path, 'r') as f:
-                window_size = f.attrs['window_size'] # this is the window size used in training
-                error_range = f.attrs['error_range'] # this is the error range used in training
-                train_picture = f.attrs['training_input'] # this is the training input image
-                model = tf.keras.models.load_model(f)
-    except:
-        "no metadata in file available"
 
-print(f"Window size: {window_size}")
-print(f"Error range: {error_range}")
-print(f"Training input: {train_picture}")
+with open(args.model_path, 'r') as f:
+    model_data = json.load(f)
+    window_size = model_data['window_size']
+    error_range = model_data['error_range']
+    train_picture = model_data['train_arr']
+    multiplicator = model_data['multiplicator']
+    model = xgb.XGBClassifier()
+    model.load_model(args.model_path)
+
+
 
 # Check if smoothing_input is a .png or .npy file
 if args.smoothing_input_path.endswith('.png'):
@@ -84,8 +64,6 @@ if input_picture.ndim == 3:
 else:
     input_is_3d = False
     dim=2
-
-
 
 # inp_ = 'dat/0_original_structures/addalloy_binary_recon_512.png'
 # ref = 'dat/0_original_structures/addalloy_binary_recon_512.png'
@@ -112,12 +90,21 @@ for sub_dir in ['npy', 'png','vtk']:
 convert_np_to_vti(input_picture,
                       f'./output/{start_time}{args.filename}_{resolution}_window_size{window_size}_{dim}D/vtk/output_0000.vti')
 
-    # Run the model for the specified number of iterations
+model_params = {
+    'window_size': window_size,
+    'error_range': error_range,
+    #'train_picture': train_picture,
+    'multiplicator': multiplicator
+}
+
+# Call the method to generate the log file
+generate_log_file(output_dir, model_params, args)
+
 for i in range(args.iterations):
     print(f"Iteration {i + 1} of {args.iterations}")
     if input_is_3d:
         print('yes')
-        output_image = apply_smoothing_3D(model, input_picture, window_size,sequential)
+        output_image = apply_smoothing_3D(model, input_picture, window_size, treshold=args.threshold)
         print(output_image)
         convert_np_to_vti(output_image,f'./output/{start_time}{args.filename}_{resolution}_window_size{window_size}_{dim}D/vtk/output_{i+1:04d}.vti')
     else:

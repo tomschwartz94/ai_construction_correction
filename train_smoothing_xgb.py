@@ -75,6 +75,7 @@ with open('model_xgb.json') as json_file:
 json_decoded['window_size']= window_size
 json_decoded['error_range']=[*error_range]
 json_decoded['train_arr']= train_arr
+json_decoded['multiplicator']= multiplicator
 
 with open('model_xgb.json', 'w') as json_file:
     json.dump(json_decoded, json_file)
