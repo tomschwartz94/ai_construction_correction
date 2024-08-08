@@ -5,7 +5,7 @@ import tensorflow as tf
 import xgboost as xgb
 from joblib import Parallel, delayed
 
-from neighborhood_extraction import extract_3D_neighborhood, extract_2D_neighborhood_with_error
+from neighborhood_extraction import extract_3D_neighborhood, extract_2D_neighborhood_with_error, extract_3D_neighborhoods
 
 
 ######################################################################################################################################################################
@@ -60,7 +60,7 @@ def apply_smoothing_2D(model, arr, windowSize):
 #                                                                                                                                                              __/ |
 #                                                                                                                                                             |___/
 ######################################################################################################################################################################
-def apply_smoothing_3D(model, arr, windowSize):
+def apply_smoothing_3D(model, arr, windowSize, sequential=True):
     """
     Apply a smoothing operation to a 3D array using a given model.
 
@@ -76,20 +76,42 @@ def apply_smoothing_3D(model, arr, windowSize):
     if isinstance(model, xgb.XGBClassifier):
         xbg_model = True
 
-    for plane in range(3):
-        print(f'{plane}')
+
+    if sequential:
+        for plane in range(1):
+            print(f'{plane}')
+            for i in range(len(arr)):
+                for j in range(len(arr[0])):
+                    for k in range(len(arr[0][0])):
+
+                        input = extract_3D_neighborhood(i, j, k, arr, windowSize, plane)
+                        if xbg_model:
+                            predictions = model.get_booster().inplace_predict([input])
+                            #arr[i, j,k] = np.round(predictions[0])
+                            arr[i, j, k] = 0 if predictions[0] < 0.666 else 1
+
+                        else:
+                            predictions = model(tf.expand_dims(input, axis=0))
+                            arr[i, j,k] = np.round(predictions[0][0])
+    else:
         for i in range(len(arr)):
             for j in range(len(arr[0])):
                 for k in range(len(arr[0][0])):
-
-                    input = extract_3D_neighborhood(i, j, k, arr, windowSize, plane)
+                    input_1, input_2, input_3 = extract_3D_neighborhoods(i, j, k, arr, windowSize)
                     if xbg_model:
-                        predictions = model.get_booster().inplace_predict([input])
-                        arr[i, j,k] = np.round(predictions[0])
+                        predictions = sum(
+                            model.get_booster().inplace_predict([input]) for input in [input_1, input_2, input_3])
+                        arr[i, j, k] = 0 if predictions[0] < 2 else 1
                     else:
-                        predictions = model(tf.expand_dims(input, axis=0))
-                        arr[i, j,k] = np.round(predictions[0][0])
+                        predictions = sum(
+                            model(tf.expand_dims(input, axis=0))[0][0] for input in [input_1, input_2, input_3])
+                        arr[i, j, k] = 1 if predictions < 1.5 else 0
+
     return arr
+
+
+
+
 
 
 def apply_smoothing_3D_parallelized(model, arr, windowSize):

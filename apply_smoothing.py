@@ -8,7 +8,7 @@ import tensorflow as tf
 from PIL import Image
 import os.path
 from prediction import apply_smoothing_2D, apply_smoothing_3D
-from conversions_and_misc import make_grid_binary
+from conversions_and_misc import make_grid_binary, convert_np_to_vti
 #from hk import hk_plotting, hk_plotting_and_grain_boundery_elimination
 from tensorflow.python.keras.saving import hdf5_format
 import h5py
@@ -19,8 +19,8 @@ import xgboost as xgb
 #log file: dokumentiert nochmal alle parameter
 
 # collect Timestamp
-start_time = time.time()
-
+start_time = time.strftime("%Y%m%d_%H%M%S")
+sequential=False
 window_size = 0
 error_range = 0
 train_picture = 0
@@ -29,6 +29,7 @@ model=0
 # collecting the arguments from the command line
 parser = argparse.ArgumentParser("apply_smoothing")
 parser.add_argument("iterations", help="defines the number of sequential smoothings applied to the input", type=int)
+parser.add_argument("threshold", help="defines the treshold for deciding between grain and boundary", type=str)
 parser.add_argument("smoothing_input_path", help="must be a path to a 2 or 3 dimensional binary matrix .npy or .png file (only 2D for obvious reasons)", type=str)
 parser.add_argument("model_path", help="must be a path to a .h5 or .json file containing the model", type=str)
 parser.add_argument("filename", help="defines the name of the output subfolder", type=str)
@@ -105,22 +106,24 @@ else:
 
     # Check if target folder already exists and create if not
 output_dir = f'./output/{start_time}{args.filename}_{resolution}_window_size{window_size}_{dim}D'
-for sub_dir in ['npy', 'png']:
+for sub_dir in ['npy', 'png','vtk']:
     dir_path = os.path.join(output_dir, sub_dir)
     os.makedirs(dir_path, exist_ok=True)
+convert_np_to_vti(input_picture,
+                      f'./output/{start_time}{args.filename}_{resolution}_window_size{window_size}_{dim}D/vtk/output_0000.vti')
 
     # Run the model for the specified number of iterations
 for i in range(args.iterations):
     print(f"Iteration {i + 1} of {args.iterations}")
     if input_is_3d:
-        output_image = apply_smoothing_3D(model, input_picture, window_size)
+        print('yes')
+        output_image = apply_smoothing_3D(model, input_picture, window_size,sequential)
+        print(output_image)
+        convert_np_to_vti(output_image,f'./output/{start_time}{args.filename}_{resolution}_window_size{window_size}_{dim}D/vtk/output_{i+1:04d}.vti')
     else:
         output_image = apply_smoothing_2D(model, input_picture, window_size)
-
-    if not input_is_3d:
-        # Save the output image
         output_image_path = f'./output/{start_time}{args.filename}_{resolution}_window_size{window_size}_{dim}D/png/{i + 1}.png'
-        Image.fromarray((output_image*255).astype(np.uint8)).save(output_image_path)
+        Image.fromarray((output_image * 255).astype(np.uint8)).save(output_image_path)
 
     # Save the output image as a .npy file
     output_npy_path = f'./output/{start_time}{args.filename}_{resolution}_window_size{window_size}_{dim}D/npy/{i + 1}.npy'
@@ -132,7 +135,7 @@ for i in range(args.iterations):
     #    # hk_plotting_and_grain_boundery_elimination(output_image_path, windowSize, image_for_comp, hk_output_image_path_)
     #    hk_plotting(output_image_path, window_size, ref, hk_output_image_path)
     # Set the output of this iteration as the input for the next
-    smoothing_input = output_image_path
+    smoothing_input = output_image
     print(f"Iteration {i + 1} complete.")
 
 print("Processing complete.")

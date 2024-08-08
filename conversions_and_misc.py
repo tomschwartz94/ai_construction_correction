@@ -2,6 +2,7 @@
 import os
 import time
 import numpy as np
+np.bool = np.bool_
 import math
 import random
 import vtk

@@ -24,8 +24,13 @@ def extract_2D_neighborhood_with_error(i, j, arr, windowSize, error):
     for x in range(i - windowSize // 2, i + windowSize // 2 + 1):
         for y in range(j - windowSize // 2, j + windowSize // 2 + 1):
             # Wrap around for both rows and columns
+
+
+
             x_periodic = x % rows
             y_periodic = y % cols
+
+
 
             if central_pixel_was_ignored:
                 index = (x - (i - windowSize // 2)) * windowSize + (y - (j - windowSize // 2))-1
@@ -47,7 +52,6 @@ def extract_2D_neighborhood_with_error(i, j, arr, windowSize, error):
     return inputs
 
 
-#append richtige methode performancemäßig?
 def extract_2D_full_data_with_error_range(arr, windowSize, error_range,multiplicator, rotation=False):
     inputs = list()
     outputs = list()
@@ -113,4 +117,63 @@ def extract_3D_neighborhood(i, j, k, arr, windowSize, plane):
 
     return inputs
 
+def extract_3D_neighborhoods(i, j, k, arr, windowSize):
+    inputs_xy = np.empty(windowSize * windowSize - 1, dtype=int)
+    inputs_xz = np.empty(windowSize * windowSize - 1, dtype=int)
+    inputs_yz = np.empty(windowSize * windowSize - 1, dtype=int)
 
+    height, length, width = arr.shape
+
+    central_pixel_was_ignored_xy = False
+    central_pixel_was_ignored_xz = False
+    central_pixel_was_ignored_yz = False
+
+    for x in range(i - windowSize // 2, i + windowSize // 2 + 1):
+        for y in range(j - windowSize // 2, j + windowSize // 2 + 1):
+            i_periodic = x % height
+            j_periodic = y % length
+
+            if central_pixel_was_ignored_xy:
+                index = (x - (i - windowSize // 2)) * windowSize + (y - (j - windowSize // 2)) - 1
+            else:
+                index = (x - (i - windowSize // 2)) * windowSize + (y - (j - windowSize // 2))
+
+            if x == i and y == j:
+                central_pixel_was_ignored_xy = True
+                continue
+
+            inputs_xy[index] = arr[i_periodic][j_periodic][k]
+
+    for x in range(i - windowSize // 2, i + windowSize // 2 + 1):
+        for z in range(k - windowSize // 2, k + windowSize // 2 + 1):
+            i_periodic = x % height
+            k_periodic = z % width
+
+            if central_pixel_was_ignored_xz:
+                index = (x - (i - windowSize // 2)) * windowSize + (z - (k - windowSize // 2)) - 1
+            else:
+                index = (x - (i - windowSize // 2)) * windowSize + (z - (k - windowSize // 2))
+
+            if x == i and z == k:
+                central_pixel_was_ignored_xz = True
+                continue
+
+            inputs_xz[index] = arr[i_periodic][j][k_periodic]
+
+    for y in range(j - windowSize // 2, j + windowSize // 2 + 1):
+        for z in range(k - windowSize // 2, k + windowSize // 2 + 1):
+            j_periodic = y % length
+            k_periodic = z % width
+
+            if central_pixel_was_ignored_yz:
+                index = (y - (j - windowSize // 2)) * windowSize + (z - (k - windowSize // 2)) - 1
+            else:
+                index = (y - (j - windowSize // 2)) * windowSize + (z - (k - windowSize // 2))
+
+            if y == j and z == k:
+                central_pixel_was_ignored_yz = True
+                continue
+
+            inputs_yz[index] = arr[i][j_periodic][k_periodic]
+
+    return inputs_xy, inputs_xz, inputs_yz
