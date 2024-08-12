@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import xgboost as xgb
 from joblib import Parallel, delayed
+import concurrent.futures
 
 from neighborhood_extraction import extract_3D_neighborhood, extract_2D_neighborhood_with_error, extract_3D_neighborhoods
 
@@ -86,11 +87,6 @@ def apply_smoothing_3D(model, arr, windowSize, treshold):
                 arr[i, j, k] = 0 if predictions[0] < treshold else 1
 
     return arr
-
-
-
-
-
 
 def apply_smoothing_3D_parallelized(model, arr, windowSize):
     """

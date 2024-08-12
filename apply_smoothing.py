@@ -101,11 +101,12 @@ model_params = {
 generate_log_file(output_dir, model_params, args)
 
 for i in range(args.iterations):
-    print(f"Iteration {i + 1} of {args.iterations}")
+    t = time.strftime("%Y%m%d_%H%M%S")
+    print(f"Iteration {i + 1} of {args.iterations} starting at {t}")
     if input_is_3d:
         print('yes')
         output_image = apply_smoothing_3D(model, input_picture, window_size, treshold=args.threshold)
-        print(output_image)
+        #print(output_image)
         convert_np_to_vti(output_image,f'./output/{start_time}{args.filename}_{resolution}_window_size{window_size}_{dim}D/vtk/output_{i+1:04d}.vti')
     else:
         output_image = apply_smoothing_2D(model, input_picture, window_size)
@@ -123,7 +124,8 @@ for i in range(args.iterations):
     #    hk_plotting(output_image_path, window_size, ref, hk_output_image_path)
     # Set the output of this iteration as the input for the next
     smoothing_input = output_image
-    print(f"Iteration {i + 1} complete.")
+    t = time.strftime("%Y%m%d_%H%M%S")
+    print(f"Iteration {i + 1} complete at {t}")
 
 print("Processing complete.")
 
