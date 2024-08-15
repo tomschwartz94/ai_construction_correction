@@ -6,7 +6,7 @@ import numpy as np
 import xgboost as xgb
 from PIL import Image
 from conversions_and_misc import generate_log_file, make_grid_binary, convert_np_to_vti
-from prediction import apply_smoothing_2D, apply_smoothing_3D
+from prediction import apply_smoothing_2D, apply_smoothing_3D, apply_smoothing_3D_xgb_array_output
 
 #log file: dokumentiert nochmal alle parameter
 
@@ -101,11 +101,14 @@ model_params = {
 generate_log_file(output_dir, model_params, args)
 
 for i in range(args.iterations):
+
     print(f"Iteration {i + 1} of {args.iterations}")
     if input_is_3d:
-        print('yes')
-        output_image = apply_smoothing_3D(model, input_picture, window_size, treshold=args.threshold)
-        print(output_image)
+
+        starting_time = time.time()
+        output_image = apply_smoothing_3D_xgb_array_output(model, input_picture, window_size, treshold=args.threshold)
+        ending_time = time.time()
+        print(f"Time for iteration {i + 1}: {ending_time - starting_time}")
         convert_np_to_vti(output_image,f'./output/{start_time}{args.filename}_{resolution}_window_size{window_size}_{dim}D/vtk/output_{i+1:04d}.vti')
     else:
         output_image = apply_smoothing_2D(model, input_picture, window_size)

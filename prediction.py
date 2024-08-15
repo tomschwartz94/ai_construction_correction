@@ -1,7 +1,6 @@
 import time
 
 import numpy as np
-import tensorflow as tf
 import xgboost as xgb
 from joblib import Parallel, delayed
 
@@ -85,9 +84,74 @@ def apply_smoothing_3D(model, arr, windowSize, treshold):
                     model.get_booster().inplace_predict([input]) for input in [input_1, input_2, input_3])
                 arr[i, j, k] = 0 if predictions[0] < treshold else 1
 
+
     return arr
 
 
+def apply_smoothing_3D_xgb_array_output(model, arr, windowSize, treshold):
+    """
+    Apply a smoothing operation to a 3D array using a given model.
+
+    Parameters:
+    model (callable): The model to use for smoothing.
+    arr (numpy.ndarray): The 3D array to smooth.
+    windowSize (int): The size of the window to use for smoothing.
+
+    Returns:
+    numpy.ndarray: The smoothed 3D array.
+    """
+
+    depth = len(arr)
+    height = len(arr[0])
+    width = len(arr[0][0])
+
+    input_1_list= np.ndarray([len(arr)**3,windowSize**2-1])
+    input_2_list = np.ndarray([len(arr)**3,windowSize**2-1])
+    input_3_list = np.ndarray([len(arr)**3,windowSize**2-1])
+
+    res_arr=np.ndarray([len(arr),len(arr),len(arr)])
+    start_time = time.time()
+    for i in range(len(arr)):
+        for j in range(len(arr[0])):
+            for k in range(len(arr[0][0])):
+                index = i * (depth * height) + j * width + k
+                input_1, input_2, input_3 = extract_3D_neighborhoods(i, j, k, arr, windowSize)
+                input_1_list[index] = input_1
+                input_2_list[index] = input_2
+                input_3_list[index] = input_3
+    end_time = time.time()
+    print(f"Extraction Duration: {end_time - start_time} seconds")
+    start_time = time.time()
+    input_1_dmatrix = xgb.DMatrix(input_1_list)
+    input_2_dmatrix = xgb.DMatrix(input_2_list)
+    input_3_dmatrix = xgb.DMatrix(input_3_list)
+    end_time = time.time()
+    print(f"Conversion to DMatrix Duration: {end_time - start_time} seconds")
+
+    start_time = time.time()
+    predictions_1 = model.get_booster().predict(input_1_dmatrix)
+    predictions_2 = model.get_booster().predict(input_2_dmatrix)
+    predictions_3 = model.get_booster().predict(input_3_dmatrix)
+    end_time = time.time()
+    print(f"Prediction Duration: {end_time - start_time} seconds")
+    start_time = time.time()
+
+
+    for i in range(len(arr)):
+        for j in range(len(arr[0])):
+            for k in range(len(arr[0][0])):
+                index = i * (depth * height) + j * width + k
+
+                prediction = predictions_1[index] + predictions_2[index] + predictions_3[index]
+
+                try:
+                    res_arr[i, j, k] = 0 if prediction < treshold else 1
+                except IndexError:
+                    print(f"IndexError at index: {index}")
+
+    end_time = time.time()
+    print(f"Reconstruction Duration: {end_time - start_time} seconds")
+    return res_arr
 
 
 
