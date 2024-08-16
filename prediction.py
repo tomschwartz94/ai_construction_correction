@@ -101,15 +101,14 @@ def apply_smoothing_3D_xgb_array_output(model, arr, windowSize, treshold):
     numpy.ndarray: The smoothed 3D array.
     """
 
-    depth = len(arr)
-    height = len(arr[0])
-    width = len(arr[0][0])
+    depth   = len(arr)
+    height  = len(arr[0])
+    width   = len(arr[0][0])
 
-    input_1_list= np.ndarray([len(arr)**3,windowSize**2-1])
+    input_1_list = np.ndarray([len(arr)**3,windowSize**2-1])
     input_2_list = np.ndarray([len(arr)**3,windowSize**2-1])
     input_3_list = np.ndarray([len(arr)**3,windowSize**2-1])
 
-    res_arr=np.ndarray([len(arr),len(arr),len(arr)])
     start_time = time.time()
     for i in range(len(arr)):
         for j in range(len(arr[0])):
@@ -145,13 +144,13 @@ def apply_smoothing_3D_xgb_array_output(model, arr, windowSize, treshold):
                 prediction = predictions_1[index] + predictions_2[index] + predictions_3[index]
 
                 try:
-                    res_arr[i, j, k] = 0 if prediction < treshold else 1
+                    arr[i, j, k] = 0 if prediction < treshold else 1
                 except IndexError:
                     print(f"IndexError at index: {index}")
 
     end_time = time.time()
     print(f"Reconstruction Duration: {end_time - start_time} seconds")
-    return res_arr
+    return arr
 
 
 

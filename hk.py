@@ -48,13 +48,26 @@ def label_neighbours(i, j, k, matrix, particle_label, labelled, labels, cluster_
     label_neighbours(i, j, (k - 1) % matrix.shape[2], matrix, particle_label, labelled, labels, cluster_points)
 
 
+
+def hk_randomize_labels(hk_matrix):
+    res_matrix = np.zeros(hk_matrix.shape, dtype=hk_matrix.dtype)
+    cluster_count = np.max(hk_matrix)
+    shuffled_labels = np.random.permutation(cluster_count) + 1
+    print(shuffled_labels)
+
+    for label in range(1, cluster_count + 1):
+        res_matrix[hk_matrix == label] = shuffled_labels[label - 1]
+
+    return res_matrix
+
+
 if __name__ == '__main__':
 
-    path2npy = '/home/ali/ai_construction_correction/output/20240808_175204case5_128_window_size13_3D/npy/4.npy'
+    path2npy = 'output/20240815_170409xgb_array_output_64_window_size13_3D/npy/8.npy'
 
     ms = np.load(path2npy)
 
     ms_k = hoshen_kopelman(ms)
-    
-    convert_np_to_vti(ms_k,f'./output.vti')
+    shuffled_labels_hk = hk_randomize_labels(ms_k)
+    convert_np_to_vti(shuffled_labels_hk,f'./output.vti')
 
